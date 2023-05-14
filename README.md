@@ -1,6 +1,14 @@
 # Description
 
-This repository is meant to serve as a general template for how to set up new repositories in the JogetOSS organization. 
+**Crud Generator Form Binder**
+
+This Crud Generator Form Binder allows user to auto generate crud operation based on the database table. User is only required to key in the local database table name.
+
+**Handle Redirect**
+* Create a app variable name "redirectUrl" and use #appVariable.redirectUrl# to auto redirect after curd is generated.
+
+## Roadmap
+* To generate Crud based on an external database table.
 
 # Getting Help
 
