@@ -2,7 +2,7 @@
 
 This **CRUD Generator Form Binder** allows user to auto generate CRUD operation based on the database table. User is only required to key in a table name. Form, list and CRUD menu will be created.
 
-This plugin can be on Joget DX 8 Professional edition and above.
+This plugin supports **Joget DX 8 Professional** edition and above.
 
 **Handle Redirect**
 * Create a app variable name "redirectUrl" and use #appVariable.redirectUrl# to auto redirect after CRUD is generated.
