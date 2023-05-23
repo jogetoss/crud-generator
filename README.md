@@ -1,14 +1,14 @@
 # Description
 
-**Crud Generator Form Binder**
+This **CRUD Generator Form Binder** allows user to auto generate CRUD operation based on the database table. User is only required to key in a table name. Form, list and CRUD menu will be created.
 
-This Crud Generator Form Binder allows user to auto generate crud operation based on the database table. User is only required to key in the local database table name.
+This plugin supports **Joget DX 8 Professional** edition and above.
 
 **Handle Redirect**
-* Create a app variable name "redirectUrl" and use #appVariable.redirectUrl# to auto redirect after curd is generated.
+* Create a app variable name "redirectUrl" and use #appVariable.redirectUrl# to auto redirect after CRUD is generated.
 
 ## Roadmap
-* To generate Crud based on an external database table.
+* To support external database table.
 
 # Getting Help
 
