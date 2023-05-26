@@ -6,7 +6,7 @@ import java.util.List;
 public class JogetForm {
 
     private String className;
-    private Properties properties;
+    private GeneralProperties properties;
     private List<Element> elements;
 
     public String getClassName() {
@@ -17,11 +17,11 @@ public class JogetForm {
         this.className = className;
     }
 
-    public Properties getProperties() {
+    public GeneralProperties getProperties() {
         return properties;
     }
 
-    public void setProperties(Properties properties) {
+    public void setProperties(GeneralProperties properties) {
         this.properties = properties;
     }
 

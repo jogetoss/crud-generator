@@ -5,6 +5,11 @@ import org.json.JSONArray;
 public class StoreBinderProperties {
     
     private String jdbcDatasource;
+    private String jdbcDriver;
+    private String jdbcUrl;
+    private String jdbcUser;
+    private String jdbcPassword;
+
     private String sql;
     private String autoHandleWorkflowVariable;
     private String autoHandleFiles;
@@ -23,6 +28,38 @@ public class StoreBinderProperties {
         this.jdbcDatasource = jdbcDatasource;
     }
 
+    public String getJdbcDriver() {
+        return jdbcDriver;
+    }
+
+    public void setJdbcDriver(String jdbcDriver) {
+        this.jdbcDriver = jdbcDriver;
+    }
+
+    public String getJdbcUrl() {
+        return jdbcUrl;
+    }
+
+    public void setJdbcUrl(String jdbcUrl) {
+        this.jdbcUrl = jdbcUrl;
+    }
+
+    public String getJdbcUser() {
+        return jdbcUser;
+    }
+
+    public void setJdbcUser(String jdbcUser) {
+        this.jdbcUser = jdbcUser;
+    }
+
+    public String getJdbcPassword() {
+        return jdbcPassword;
+    }
+
+    public void setJdbcPassword(String jdbcPassword) {
+        this.jdbcPassword = jdbcPassword;
+    }
+    
     public String getSql() {
         return sql;
     }

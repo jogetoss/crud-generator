@@ -1,7 +1,7 @@
 
 package org.joget.marketplace.model;
 
-public class Properties {
+public class GeneralProperties {
 
     private String id;
     private String name;

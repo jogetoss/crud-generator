@@ -1,6 +1,7 @@
 package org.joget.marketplace;
 
 import com.google.gson.Gson;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,7 +12,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Properties;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.joget.apps.app.dao.EnvironmentVariableDao;
 import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.model.EnvironmentVariable;
@@ -29,7 +35,7 @@ import org.joget.marketplace.model.ColumnProperties;
 import org.joget.marketplace.model.FormElement;
 import org.joget.marketplace.model.JogetForm;
 import org.joget.marketplace.model.LoadBinder;
-import org.joget.marketplace.model.Properties;
+import org.joget.marketplace.model.GeneralProperties;
 import org.joget.marketplace.model.FieldProperties;
 import org.joget.marketplace.model.LoadBinderProperties;
 import org.joget.marketplace.model.MetaData;
@@ -39,18 +45,40 @@ import org.joget.marketplace.model.StoreBinder;
 import org.joget.marketplace.model.StoreBinderProperties;
 import org.joget.marketplace.model.Validator;
 import org.joget.marketplace.model.ValidatorProperties;
-import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
+import org.apache.commons.dbcp2.BasicDataSourceFactory;
+import org.joget.apps.app.service.AppPluginUtil;
+import org.joget.commons.util.DynamicDataSourceManager;
+import org.joget.plugin.base.PluginWebSupport;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-public class CrudGenerator extends WorkflowFormBinder {
+
+public class CrudGenerator extends WorkflowFormBinder implements PluginWebSupport {
+    private static final String MESSAGE_PATH = "message/CrudGenerator";
 
     @Override
     public FormRowSet store(Element element, FormRowSet rows, FormData formData) {
-        String tableName = formData.getRequestParameter("table_name");
+        String datasourceType = formData.getRequestParameter(getPropertyString("datasourcefield"));
+        String tableName = formData.getRequestParameter(getPropertyString("tablenamefield"));
+        String keyColumn = formData.getRequestParameter(getPropertyString("keycolumnfield"));
+        String customJDBCDriver = formData.getRequestParameter(getPropertyString("driverfield"));
+        String customJDBCURL = formData.getRequestParameter(getPropertyString("urlfield"));
+        String customJDBCUsername = formData.getRequestParameter(getPropertyString("usernamefield"));
+        String customJDBCPassword = formData.getRequestParameter(getPropertyString("passwordfield"));
+    
+        ArrayList<String> customJDBCArr = new ArrayList<String>();
+        
+        customJDBCArr.add(customJDBCDriver);
+        customJDBCArr.add(customJDBCURL);
+        customJDBCArr.add(customJDBCUsername);
+        customJDBCArr.add(customJDBCPassword);
+
         List<MetaData> metaDataList = new ArrayList<>();
+        DataSource ds = null;
         Connection con = null;
         try {
-            DataSource ds = (DataSource) AppUtil.getApplicationContext().getBean("setupDataSource");
+            ds = createDataSource(datasourceType, customJDBCArr);
             con = ds.getConnection();
             String sql = "SELECT * FROM " + tableName;
             PreparedStatement stmt = con.prepareStatement(sql);
@@ -65,15 +93,14 @@ public class CrudGenerator extends WorkflowFormBinder {
                 md.setType(metaData.getColumnTypeName(i));
                 metaDataList.add(md);
             }
-            List<FormElement> formElementList = generateForm(tableName, metaDataList);
-            //generateDataList(tableName, formElementList);
+            List<FormElement> formElementList = generateForm(datasourceType, tableName, keyColumn, customJDBCArr, metaDataList);
             generateCrud(tableName, formElementList);
-        } catch (SQLException | BeansException e) {
+        } catch (Exception e) {
             LogUtil.error(getClassName(), e, e.getMessage());
         } finally {
             //always close the connection after used
             try {
-                if (con != null) {
+                if (con != null && !con.isClosed()) {
                     con.close();
                 }
             } catch (SQLException e) {/* ignored */
@@ -82,6 +109,23 @@ public class CrudGenerator extends WorkflowFormBinder {
 
         FormRowSet frs = super.store(element, rows, formData);
         return frs;
+    }
+
+    protected DataSource createDataSource(String datasourceType, ArrayList<String> customJDBCArr) throws Exception{
+        DataSource ds = null;
+        if ("default".equals(datasourceType)) {
+            // use current datasource
+            ds = (DataSource) AppUtil.getApplicationContext().getBean("setupDataSource");
+        } else {
+            // use custom datasource
+            Properties dsProps = new Properties();
+            dsProps.put("driverClassName", customJDBCArr.get(0));
+            dsProps.put("url", customJDBCArr.get(1));
+            dsProps.put("username", customJDBCArr.get(2));
+            dsProps.put("password", customJDBCArr.get(3));
+            ds = BasicDataSourceFactory.createDataSource(dsProps);
+        }
+        return ds;
     }
 
     public void generateCrud(String formId, List<FormElement> formElementList) {
@@ -135,12 +179,10 @@ public class CrudGenerator extends WorkflowFormBinder {
         return extractedTags[1];
     }
 
-    public List<FormElement> generateForm(String tableName, List<MetaData> metaDataList) {
-
-        // do the custom stuff 
+    public List<FormElement> generateForm(String datasourceType, String tableName, String keyColumn, ArrayList<String> customJDBCArr, List<MetaData> metaDataList) {
         JogetForm jogetForm = new JogetForm();
         jogetForm.setClassName("org.joget.apps.form.model.Form");
-        Properties props = new Properties();
+        GeneralProperties props = new GeneralProperties();
         props.setId(tableName);
         props.setName(tableName.toUpperCase());
         props.setTableName(tableName);
@@ -148,23 +190,40 @@ public class CrudGenerator extends WorkflowFormBinder {
         LoadBinder lb = new LoadBinder();
         lb.setClassName("org.joget.plugin.enterprise.DatabaseWizardLoadBinder");
         LoadBinderProperties lbProperties = new LoadBinderProperties();
-        lbProperties.setJdbcDatasource("default");
         lbProperties.setAutoHandleWorkflowVariable("true");
         lbProperties.setAutoHandleFiles("");
         lbProperties.setTableName(tableName);
-        lbProperties.setKeyColumn("id");
+        lbProperties.setKeyColumn(keyColumn);
         lbProperties.setExtraCondition("");
+        if (datasourceType.equals("custom")) {
+            lbProperties.setJdbcDatasource(datasourceType);
+            lbProperties.setJdbcDriver(customJDBCArr.get(0));
+            lbProperties.setJdbcUrl(customJDBCArr.get(1));
+            lbProperties.setJdbcUser(customJDBCArr.get(2));
+            lbProperties.setJdbcPassword(customJDBCArr.get(3));
+        } else if (datasourceType.equals("default")) {
+            lbProperties.setJdbcDatasource(datasourceType);
+        }
         lb.setProperties(lbProperties);
         props.setLoadBinder(lb);
 
         StoreBinder sb = new StoreBinder();
         sb.setClassName("org.joget.plugin.enterprise.DatabaseWizardStoreBinder");
         StoreBinderProperties sbProperties = new StoreBinderProperties();
-        sbProperties.setJdbcDatasource("default");
         sbProperties.setAutoHandleWorkflowVariable("true");
         sbProperties.setAutoHandleFiles("");
         sbProperties.setTableName(tableName);
-        sbProperties.setKeyColumn("id");
+        sbProperties.setKeyColumn(keyColumn);
+        lbProperties.setExtraCondition("");
+        if (datasourceType.equals("custom")) {
+            sbProperties.setJdbcDatasource(datasourceType);
+            sbProperties.setJdbcDriver(customJDBCArr.get(0));
+            sbProperties.setJdbcUrl(customJDBCArr.get(1));
+            sbProperties.setJdbcUser(customJDBCArr.get(2));
+            sbProperties.setJdbcPassword(customJDBCArr.get(3));
+        } else if (datasourceType.equals("default")) {
+            sbProperties.setJdbcDatasource(datasourceType);
+        }
         sb.setProperties(sbProperties);
         props.setStoreBinder(sb);
 
@@ -236,7 +295,6 @@ public class CrudGenerator extends WorkflowFormBinder {
         Collection<String> errors = appService.createFormDefinition(appDef, formDefinition);
 
         return formElementList;
-
     }
 
     @Override
@@ -246,27 +304,86 @@ public class CrudGenerator extends WorkflowFormBinder {
 
     @Override
     public String getName() {
-        return "CRUD Generator Form Binder";
+        return AppPluginUtil.getMessage("formbinder.CrudGenerator.name", getClassName(), MESSAGE_PATH);
     }
 
     @Override
     public String getVersion() {
-        return "8.0.0";
+        final Properties projectProp = new Properties();
+        try {
+            projectProp.load(this.getClass().getClassLoader().getResourceAsStream("project.properties"));
+        } catch (IOException ex) {
+            LogUtil.error(getClass().getName(), ex, "Unable to get project version from project properties...");
+        }
+        return projectProp.getProperty("version");
     }
 
     @Override
     public String getDescription() {
-        return "CRUD Generator Form Binder";
+        return AppPluginUtil.getMessage("formbinder.CrudGenerator.desc", getClassName(), MESSAGE_PATH);
     }
 
     @Override
     public String getLabel() {
-        return "CRUD Generator Form Binder";
+        return AppPluginUtil.getMessage("formbinder.CrudGenerator.name", getClassName(), MESSAGE_PATH);
+    }
+
+    @Override
+    public String getClassName() {
+        return this.getClass().getName();
     }
 
     @Override
     public String getPropertyOptions() {
-        return "";
+        return AppUtil.readPluginResource(getClass().getName(), "/properties/CrudGenerator.json", null, true, MESSAGE_PATH);
     }
+
+   public void webService(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+       String action = request.getParameter("action");
+       if ("testConnection".equals(action)) {
+           String message = "";
+           Connection conn = null;
+
+           AppDefinition appDef = AppUtil.getCurrentAppDefinition();
+
+           String jdbcDriver = AppUtil.processHashVariable(request.getParameter("jdbcDriver"), null, null, null, appDef);
+           String jdbcUrl = AppUtil.processHashVariable(request.getParameter("jdbcUrl"), null, null, null, appDef);
+           String jdbcUser = AppUtil.processHashVariable(request.getParameter("jdbcUser"), null, null, null, appDef);
+           String jdbcPassword = AppUtil.processHashVariable(request.getParameter("jdbcPassword"), null, null, null, appDef);
+
+           Properties dsProps = new Properties();
+           dsProps.put("driverClassName", jdbcDriver);
+           dsProps.put("url", jdbcUrl);
+           dsProps.put("username", jdbcUser);
+           dsProps.put("password", jdbcPassword);
+
+           try ( BasicDataSource ds = BasicDataSourceFactory.createDataSource(dsProps)) {
+
+               conn = ds.getConnection();
+
+               message = AppPluginUtil.getMessage("datalist.jdbcDataListBinder.connectionOk", getClassName(), null);
+           } catch (Exception e) {
+               LogUtil.error(getClassName(), e, "Test Connection error");
+               message = AppPluginUtil.getMessage("datalist.jdbcDataListBinder.connectionFail", getClassName(), null) + "\n" + e.getLocalizedMessage();
+           } finally {
+               try {
+                   if (conn != null && !conn.isClosed()) {
+                       conn.close();
+                   }
+               } catch (SQLException e) {
+                   LogUtil.error(DynamicDataSourceManager.class.getName(), e, "");
+               }
+           }
+           try {
+               JSONObject jsonObject = new JSONObject();
+               jsonObject.accumulate("message", message);
+               jsonObject.write(response.getWriter());
+           } catch (IOException | JSONException e) {
+               //ignore
+           }
+       } else {
+           response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+       }
+   }
 
 }

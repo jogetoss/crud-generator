@@ -1,0 +1,68 @@
+[{
+    title : '@@org.joget.marketplace.CrudGenerator.config@@',
+    properties : [
+        {
+            name:'formDefId',
+            label:'@@org.joget.marketplace.CrudGenerator.formDefId@@',
+            type:'selectbox',
+            options_ajax:'[CONTEXT_PATH]/web/json/console/app[APP_PATH]/forms/options',
+            required : 'True'
+        },
+        {
+            name:'datasourcefield',
+            label:'@@org.joget.marketplace.CrudGenerator.datasource@@',
+            type:'selectbox',
+            options_ajax_on_change : 'formDefId',
+            options_ajax : '[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options',
+            required : 'True'
+        },  
+        {
+            name:'tablenamefield',
+            label:'@@org.joget.marketplace.CrudGenerator.tablename@@',
+            type:'selectbox',
+            options_ajax_on_change : 'formDefId',
+            options_ajax : '[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options',
+            required : 'True'
+        },  
+        {
+            name:'keycolumnfield',
+            label:'@@org.joget.marketplace.CrudGenerator.keycolumn@@',
+            type:'selectbox',
+            options_ajax_on_change : 'formDefId',
+            options_ajax : '[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options',
+            required : 'True'
+        },  
+        {
+            name:'driverfield',
+            label:'@@org.joget.marketplace.CrudGenerator.driver@@',
+            type:'selectbox',
+            options_ajax_on_change : 'formDefId',
+            options_ajax : '[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options',
+            required : 'True'
+        },  
+        {
+            name:'urlfield',
+            label:'@@org.joget.marketplace.CrudGenerator.url@@',
+            type:'selectbox',
+            options_ajax_on_change : 'formDefId',
+            options_ajax : '[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options',
+            required : 'True'
+        },  
+        {
+            name:'usernamefield',
+            label:'@@org.joget.marketplace.CrudGenerator.username@@',
+            type:'selectbox',
+            options_ajax_on_change : 'formDefId',
+            options_ajax : '[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options',
+            required : 'True'
+        },  
+        {
+            name:'passwordfield',
+            label:'@@org.joget.marketplace.CrudGenerator.password@@',
+            type:'selectbox',
+            options_ajax_on_change : 'formDefId',
+            options_ajax : '[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options',
+            required : 'True'
+        }
+    ]
+}]
